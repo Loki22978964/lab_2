@@ -28,38 +28,21 @@ namespace ConsoleApp1
         public void Insert(T value)
         {
             if (value is null) throw new ArgumentNullException(nameof(value));
-            if (_root is null)
+            _root = InsertRecursive(_root, value);
+        }
+
+        private Node InsertRecursive(Node? node, T value)
+        {
+            if (node is null)
             {
-                _root = new Node(value);
-                Count = 1;
-                return;
+                Count++;
+                return new Node(value);
             }
 
-            Node current = _root;
-            while (true)
-            {
-                int cmp = _comparer.Compare(value, current.Value);
-                if (cmp <= 0)
-                {
-                    if (current.Left is null)
-                    {
-                        current.Left = new Node(value);
-                        Count++;
-                        return;
-                    }
-                    current = current.Left;
-                }
-                else
-                {
-                    if (current.Right is null)
-                    {
-                        current.Right = new Node(value);
-                        Count++;
-                        return;
-                    }
-                    current = current.Right;
-                }
-            }
+            int cmp = _comparer.Compare(value, node.Value);
+            if (cmp <= 0) node.Left = InsertRecursive(node.Left, value);
+            else node.Right = InsertRecursive(node.Right, value);
+            return node;
         }
 
         public bool Contains(T value)
@@ -75,53 +58,16 @@ namespace ConsoleApp1
             return false;
         }
 
-        public IEnumerator<T> GetEnumerator()
-        {
-            return new PostOrderEnumerator(_root);
-        }
+        public IEnumerator<T> GetEnumerator() => PostOrderTraversal(_root).GetEnumerator();
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-        private class PostOrderEnumerator : IEnumerator<T>
+        private static IEnumerable<T> PostOrderTraversal(Node? node)
         {
-            private readonly Stack<(Node node, bool visited)> _stack = new();
-            private T? _current;
-
-            public PostOrderEnumerator(Node? root)
-            {
-                if (root is not null)
-                    _stack.Push((root, false));
-            }
-
-            public T Current => _current!;
-            object IEnumerator.Current => Current!;
-
-            public bool MoveNext()
-            {
-                while (_stack.Count > 0)
-                {
-                    var (node, visited) = _stack.Pop();
-                    if (visited)
-                    {
-                        _current = node.Value;
-                        return true;
-                    }
-
-                    _stack.Push((node, true));
-                    if (node.Right is not null) _stack.Push((node.Right, false));
-                    if (node.Left is not null) _stack.Push((node.Left, false));
-                }
-                return false;
-            }
-
-            public void Reset()
-            {
-                throw new NotSupportedException();
-            }
-
-            public void Dispose()
-            {
-            }
+            if (node is null) yield break;
+            foreach (var v in PostOrderTraversal(node.Left)) yield return v;
+            foreach (var v in PostOrderTraversal(node.Right)) yield return v;
+            yield return node.Value;
         }
     }
 }
